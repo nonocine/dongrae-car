@@ -1,0 +1,57 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { adminLogin } from "@/app/actions";
+
+export default function AdminForm() {
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <form
+      action={(formData) => {
+        setError(null);
+        startTransition(async () => {
+          try {
+            const res = await adminLogin(formData);
+            if (res && !res.ok) setError(res.message);
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : "로그인 중 오류가 발생했습니다.";
+            if (msg.includes("NEXT_REDIRECT")) throw e;
+            setError(msg);
+          }
+        });
+      }}
+      className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+    >
+      <div>
+        <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+          관리자 비밀번호
+        </label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          required
+          autoFocus
+          className="mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+        />
+      </div>
+
+      {error && (
+        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+      )}
+
+      <button
+        type="submit"
+        disabled={pending}
+        className="w-full rounded-md bg-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-800 disabled:opacity-60"
+      >
+        {pending ? "확인 중…" : "로그인"}
+      </button>
+      <p className="text-xs text-slate-500">
+        관리자 로그인 시 운행일지 삭제가 가능합니다.
+      </p>
+    </form>
+  );
+}
