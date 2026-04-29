@@ -53,6 +53,16 @@ export default async function Home({
       <main className="mx-auto w-full max-w-3xl flex-1 space-y-5 px-4 py-5 sm:py-6">
         <VehicleCard cumulative={cumulative} />
 
+        {admin && (
+          <Link
+            href="/admin"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-base font-semibold text-white shadow-sm hover:bg-blue-700"
+          >
+            <span aria-hidden>⚙️</span>
+            관리자 대시보드
+          </Link>
+        )}
+
         <DriverBar />
 
         <section className="flex flex-wrap items-center justify-between gap-3">
