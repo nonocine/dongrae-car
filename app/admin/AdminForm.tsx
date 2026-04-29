@@ -22,7 +22,7 @@ export default function AdminForm() {
           }
         });
       }}
-      className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+      className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
     >
       <div>
         <label htmlFor="password" className="block text-sm font-medium text-slate-700">
@@ -34,23 +34,25 @@ export default function AdminForm() {
           type="password"
           required
           autoFocus
-          className="mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+          className="mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[color:var(--brand)] focus:outline-none focus:ring-1 focus:ring-[color:var(--brand)]"
         />
       </div>
 
       {error && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        <p className="rounded-md bg-[color:var(--accent-soft)] px-3 py-2 text-sm text-[color:var(--accent)]">
+          {error}
+        </p>
       )}
 
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-800 disabled:opacity-60"
+        className="w-full rounded-md bg-[color:var(--brand)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[color:var(--brand-strong)] disabled:opacity-60"
       >
         {pending ? "확인 중…" : "로그인"}
       </button>
       <p className="text-xs text-slate-500">
-        관리자 로그인 시 운행일지 삭제가 가능합니다.
+        관리자 로그인 시 운전자 계정 관리, 초기 누적거리 설정, 운행일지 삭제가 가능합니다.
       </p>
     </form>
   );

@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    remotePatterns: [
+      { hostname: "cdn.motor1.com" },
+      { hostname: "www.kia.com" },
+    ],
+  },
 };
 
 export default nextConfig;

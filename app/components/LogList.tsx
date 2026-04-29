@@ -7,9 +7,7 @@ function formatDate(d: string) {
 }
 
 function formatNumber(n: number) {
-  return new Intl.NumberFormat("ko-KR", {
-    maximumFractionDigits: 1,
-  }).format(n);
+  return new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(n);
 }
 
 export default function LogList({
@@ -21,7 +19,7 @@ export default function LogList({
 }) {
   if (logs.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+      <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
         해당 기간에 등록된 운행일지가 없습니다.
       </div>
     );
@@ -32,11 +30,11 @@ export default function LogList({
       {logs.map((log) => (
         <li
           key={log.id}
-          className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+          className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
         >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-medium text-blue-700">
+              <p className="text-xs font-semibold text-[color:var(--brand)]">
                 {formatDate(log.driven_at)}
               </p>
               <p className="mt-0.5 text-base font-semibold text-slate-900">
@@ -45,13 +43,13 @@ export default function LogList({
             </div>
             <div className="text-right">
               <p className="text-xs text-slate-500">운행거리</p>
-              <p className="text-base font-semibold text-slate-900">
+              <p className="text-base font-bold text-slate-900">
                 {formatNumber(log.distance)} km
               </p>
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+          <div className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-2">
             <div className="flex gap-2">
               <span className="w-14 shrink-0 text-slate-500">운전자</span>
               <span className="font-medium text-slate-800">{log.driver}</span>

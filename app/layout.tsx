@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { DriverSessionProvider } from "@/app/components/DriverSession";
 
 export const metadata: Metadata = {
   title: "동래구청소년센터 차량 운행일지",
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#1d4ed8",
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
@@ -19,8 +20,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className="h-full antialiased">
-      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
-        {children}
+      <body className="min-h-full flex flex-col bg-white text-slate-900">
+        <DriverSessionProvider>{children}</DriverSessionProvider>
       </body>
     </html>
   );

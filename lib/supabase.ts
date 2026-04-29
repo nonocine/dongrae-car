@@ -15,7 +15,6 @@ function getClient(): SupabaseClient {
   return _client;
 }
 
-// 기존 호출 코드 (`supabase.from(...)`)를 그대로 사용할 수 있도록 Proxy로 lazy 위임.
 export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
   get(_target, prop, receiver) {
     const client = getClient() as unknown as Record<string | symbol, unknown>;
@@ -40,4 +39,10 @@ export type DrivingLog = {
   created_at: string;
 };
 
-export type DrivingLogInput = Omit<DrivingLog, "id" | "created_at">;
+export type Driver = {
+  id: string;
+  name: string;
+  created_at: string;
+};
+
+export type DriverWithPassword = Driver & { password: string };

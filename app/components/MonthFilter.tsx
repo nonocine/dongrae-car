@@ -25,7 +25,7 @@ export default function MonthFilter({ value }: { value: string }) {
         type="month"
         value={value}
         onChange={(e) => update(e.target.value)}
-        className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm shadow-sm focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+        className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm shadow-sm focus:border-[color:var(--brand)] focus:outline-none focus:ring-1 focus:ring-[color:var(--brand)]"
       />
       {value && (
         <button

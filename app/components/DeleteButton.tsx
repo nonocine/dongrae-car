@@ -17,7 +17,7 @@ export default function DeleteButton({ id }: { id: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="text-xs text-red-600 hover:underline disabled:opacity-50"
+        className="text-xs font-medium text-[color:var(--accent)] hover:underline disabled:opacity-50"
       >
         {pending ? "삭제 중…" : "삭제"}
       </button>

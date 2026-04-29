@@ -5,54 +5,40 @@ import { isAdmin, adminLogout } from "@/app/actions";
 export default async function Header() {
   const admin = await isAdmin();
   return (
-    <header className="bg-blue-700 text-white shadow-sm">
-      <div className="mx-auto w-full max-w-3xl px-4 py-4 sm:py-5">
-        <div className="flex items-start justify-between gap-3">
-          <Link href="/" className="block">
-            <p className="text-xs font-medium text-blue-100">{VEHICLE.centerName}</p>
-            <h1 className="text-lg sm:text-xl font-bold tracking-tight">
-              차량 운행일지
-            </h1>
-          </Link>
-          <div className="flex items-center gap-2 text-xs">
-            {admin ? (
-              <form action={adminLogout}>
-                <button
-                  type="submit"
-                  className="rounded-full bg-blue-800/40 px-3 py-1.5 font-medium hover:bg-blue-800/60"
-                >
-                  관리자 로그아웃
-                </button>
-              </form>
-            ) : (
-              <Link
-                href="/admin"
-                className="rounded-full bg-blue-800/40 px-3 py-1.5 font-medium hover:bg-blue-800/60"
+    <header className="border-b border-slate-200 bg-white">
+      <div className="mx-auto grid w-full max-w-3xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 sm:py-4">
+        <Link href="/" className="flex items-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={VEHICLE.logoPath}
+            alt="동래구청소년센터 로고"
+            className="h-10 w-auto rounded-md bg-white object-contain"
+          />
+        </Link>
+
+        <h1 className="text-center text-base font-semibold tracking-tight text-slate-900 sm:text-lg">
+          차량 운행일지
+        </h1>
+
+        <div className="flex items-center justify-end">
+          {admin ? (
+            <form action={adminLogout}>
+              <button
+                type="submit"
+                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
               >
-                관리자
-              </Link>
-            )}
-          </div>
+                관리자 로그아웃
+              </button>
+            </form>
+          ) : (
+            <Link
+              href="/admin"
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            >
+              관리자
+            </Link>
+          )}
         </div>
-        <dl className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-blue-50">
-          <div className="flex gap-2">
-            <dt className="text-blue-200">차종</dt>
-            <dd className="font-medium">{VEHICLE.model}</dd>
-          </div>
-          <div className="flex gap-2">
-            <dt className="text-blue-200">차량번호</dt>
-            <dd className="font-medium">{VEHICLE.plate}</dd>
-          </div>
-          <div className="flex gap-2">
-            <dt className="text-blue-200">보험사</dt>
-            <dd className="font-medium">
-              {VEHICLE.insurer}{" "}
-              <a href={`tel:${VEHICLE.insurerPhone}`} className="underline">
-                {VEHICLE.insurerPhone}
-              </a>
-            </dd>
-          </div>
-        </dl>
       </div>
     </header>
   );
