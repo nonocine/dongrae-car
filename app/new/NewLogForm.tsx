@@ -11,11 +11,25 @@ type Props = {
   previousCumulative: number;
 };
 
-type DepartureMode = "center" | "custom";
+const FREQUENT_PLACES = [
+  VEHICLE.centerName,
+  "동래구청",
+  "부산시청",
+  "기장군청",
+] as const;
+const CUSTOM = "__custom__";
+const MAX_WAYPOINTS = 5;
+
+type Place = { selected: string; custom: string };
+
+function resolvePlace(p: Place): string {
+  return p.selected === CUSTOM ? p.custom.trim() : p.selected;
+}
 
 const labelCls = "block text-sm font-medium text-slate-700";
-const inputCls =
-  "mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[color:var(--brand)] focus:outline-none focus:ring-1 focus:ring-[color:var(--brand)]";
+const inputBase =
+  "block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[color:var(--brand)] focus:outline-none focus:ring-1 focus:ring-[color:var(--brand)]";
+const inputCls = `mt-1 ${inputBase}`;
 
 function formatNumber(n: number) {
   return new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(n);
@@ -24,13 +38,23 @@ function formatNumber(n: number) {
 export default function NewLogForm({ defaultDate, previousCumulative }: Props) {
   const { ready, driver, signOut } = useDriverSession();
   const [odometer, setOdometer] = useState<string>("");
-  const [departureMode, setDepartureMode] = useState<DepartureMode>("center");
-  const [departureCustom, setDepartureCustom] = useState<string>("");
+  const [departure, setDeparture] = useState<Place>({
+    selected: VEHICLE.centerName,
+    custom: "",
+  });
+  const [destination, setDestination] = useState<Place>({
+    selected: "",
+    custom: "",
+  });
+  const [waypoints, setWaypoints] = useState<Place[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const resolvedDeparture =
-    departureMode === "center" ? VEHICLE.centerName : departureCustom.trim();
+  const resolvedDeparture = resolvePlace(departure);
+  const resolvedDestination = resolvePlace(destination);
+  const resolvedWaypoints = waypoints
+    .map(resolvePlace)
+    .filter((s) => s.length > 0);
 
   const odometerNum = Number(odometer);
   const rounded =
@@ -40,6 +64,17 @@ export default function NewLogForm({ defaultDate, previousCumulative }: Props) {
   const distance =
     rounded !== null ? Math.round((rounded - previousCumulative) * 10) / 10 : null;
   const distanceInvalid = distance !== null && distance < 0;
+
+  function addWaypoint() {
+    if (waypoints.length >= MAX_WAYPOINTS) return;
+    setWaypoints([...waypoints, { selected: "", custom: "" }]);
+  }
+  function updateWaypoint(i: number, next: Place) {
+    setWaypoints(waypoints.map((w, idx) => (idx === i ? next : w)));
+  }
+  function removeWaypoint(i: number) {
+    setWaypoints(waypoints.filter((_, idx) => idx !== i));
+  }
 
   if (!ready) {
     return (
@@ -57,7 +92,7 @@ export default function NewLogForm({ defaultDate, previousCumulative }: Props) {
           가능합니다.
         </p>
         <Link
-          href="/login?next=/new"
+          href="/login"
           className="inline-block rounded-md bg-[color:var(--brand)] px-4 py-2 text-sm font-semibold text-white hover:bg-[color:var(--brand-strong)]"
         >
           운전자 로그인
@@ -74,6 +109,10 @@ export default function NewLogForm({ defaultDate, previousCumulative }: Props) {
           setError("출발지를 입력해주세요.");
           return;
         }
+        if (!resolvedDestination) {
+          setError("도착지를 입력해주세요.");
+          return;
+        }
         if (distanceInvalid) {
           setError(
             `입력한 누적거리(${formatNumber(rounded ?? 0)} km)가 직전 누적(${formatNumber(
@@ -85,6 +124,8 @@ export default function NewLogForm({ defaultDate, previousCumulative }: Props) {
         formData.set("driver", driver.name);
         formData.set("driver_password", driver.password);
         formData.set("departure", resolvedDeparture);
+        formData.set("destination", resolvedDestination);
+        formData.set("waypoint", resolvedWaypoints.join(", "));
         startTransition(async () => {
           try {
             await createDrivingLog(formData);
@@ -151,54 +192,52 @@ export default function NewLogForm({ defaultDate, previousCumulative }: Props) {
       </div>
 
       <div>
-        <label htmlFor="departure_mode" className={labelCls}>
+        <label className={labelCls}>
           출발지 <span className="text-[color:var(--accent)]">*</span>
         </label>
-        <select
-          id="departure_mode"
-          value={departureMode}
-          onChange={(e) => setDepartureMode(e.target.value as DepartureMode)}
-          className={inputCls}
-        >
-          <option value="center">{VEHICLE.centerName}</option>
-          <option value="custom">기타 (직접입력)</option>
-        </select>
-        {departureMode === "custom" && (
-          <input
-            type="text"
-            value={departureCustom}
-            onChange={(e) => setDepartureCustom(e.target.value)}
-            required
-            placeholder="출발지를 입력해주세요"
-            className={`${inputCls} mt-2`}
-          />
-        )}
-        <input type="hidden" name="departure" value={resolvedDeparture} />
+        <PlacePicker value={departure} onChange={setDeparture} required />
       </div>
 
       <div>
-        <label htmlFor="waypoint" className={labelCls}>
-          경유지 <span className="text-slate-400">(선택)</span>
-        </label>
-        <input
-          id="waypoint"
-          name="waypoint"
-          type="text"
-          placeholder="여러 경유지는 쉼표로 구분"
-          className={inputCls}
-        />
+        <div className="flex items-center justify-between">
+          <label className={labelCls}>
+            경유지 <span className="text-slate-400">(선택)</span>
+          </label>
+          <span className="text-xs text-slate-400">
+            {waypoints.length}/{MAX_WAYPOINTS}
+          </span>
+        </div>
+        <div className="mt-1 space-y-2">
+          {waypoints.map((wp, i) => (
+            <PlacePicker
+              key={i}
+              value={wp}
+              onChange={(next) => updateWaypoint(i, next)}
+              onRemove={() => removeWaypoint(i)}
+              placeholder="경유지를 선택해주세요"
+            />
+          ))}
+          {waypoints.length < MAX_WAYPOINTS && (
+            <button
+              type="button"
+              onClick={addWaypoint}
+              className="w-full rounded-md border border-dashed border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            >
+              + 경유지 추가
+            </button>
+          )}
+        </div>
       </div>
 
       <div>
-        <label htmlFor="destination" className={labelCls}>
+        <label className={labelCls}>
           도착지 <span className="text-[color:var(--accent)]">*</span>
         </label>
-        <input
-          id="destination"
-          name="destination"
-          type="text"
+        <PlacePicker
+          value={destination}
+          onChange={setDestination}
+          placeholder="도착지를 선택해주세요"
           required
-          className={inputCls}
         />
       </div>
 
@@ -276,5 +315,72 @@ export default function NewLogForm({ defaultDate, previousCumulative }: Props) {
         </button>
       </div>
     </form>
+  );
+}
+
+function PlacePicker({
+  value,
+  onChange,
+  required,
+  placeholder,
+  onRemove,
+}: {
+  value: Place;
+  onChange: (next: Place) => void;
+  required?: boolean;
+  placeholder?: string;
+  onRemove?: () => void;
+}) {
+  const select = (
+    <select
+      value={value.selected}
+      onChange={(e) =>
+        onChange({ selected: e.target.value, custom: value.custom })
+      }
+      required={required}
+      className={`${inputBase} ${onRemove ? "min-w-0 flex-1" : ""}`}
+    >
+      <option value="" disabled>
+        {placeholder ?? "선택해주세요"}
+      </option>
+      {FREQUENT_PLACES.map((p) => (
+        <option key={p} value={p}>
+          {p}
+        </option>
+      ))}
+      <option value={CUSTOM}>기타 (직접입력)</option>
+    </select>
+  );
+
+  return (
+    <div className={onRemove ? "space-y-2" : "mt-1 space-y-2"}>
+      {onRemove ? (
+        <div className="flex items-stretch gap-2">
+          {select}
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label="경유지 삭제"
+            className="shrink-0 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-500 hover:bg-[color:var(--accent-soft)] hover:text-[color:var(--accent)]"
+          >
+            ✕
+          </button>
+        </div>
+      ) : (
+        select
+      )}
+      {value.selected === CUSTOM && (
+        <input
+          type="text"
+          value={value.custom}
+          onChange={(e) =>
+            onChange({ selected: CUSTOM, custom: e.target.value })
+          }
+          required={required}
+          placeholder="장소를 직접 입력해주세요"
+          className={inputBase}
+        />
+      )}
+    </div>
   );
 }

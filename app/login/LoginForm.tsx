@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { loginDriver } from "@/app/actions";
 import { useDriverSession } from "@/app/components/DriverSession";
@@ -9,8 +8,7 @@ const labelCls = "block text-sm font-medium text-slate-700";
 const inputCls =
   "mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[color:var(--brand)] focus:outline-none focus:ring-1 focus:ring-[color:var(--brand)]";
 
-export default function LoginForm({ next }: { next: string }) {
-  const router = useRouter();
+export default function LoginForm() {
   const { signIn } = useDriverSession();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -27,8 +25,7 @@ export default function LoginForm({ next }: { next: string }) {
             return;
           }
           signIn({ id: res.driver.id, name: res.driver.name, password });
-          router.push(next || "/new");
-          router.refresh();
+          window.location.href = "/";
         });
       }}
       className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"

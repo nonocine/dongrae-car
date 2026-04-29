@@ -4,11 +4,7 @@ import LoginForm from "@/app/login/LoginForm";
 
 export const dynamic = "force-dynamic";
 
-export default function LoginPage({
-  searchParams,
-}: {
-  searchParams?: Promise<{ next?: string }>;
-}) {
+export default function LoginPage() {
   return (
     <>
       <Header />
@@ -19,18 +15,8 @@ export default function LoginPage({
             ← 목록
           </Link>
         </div>
-        <LoginFormShell searchParams={searchParams} />
+        <LoginForm />
       </main>
     </>
   );
-}
-
-async function LoginFormShell({
-  searchParams,
-}: {
-  searchParams?: Promise<{ next?: string }>;
-}) {
-  const sp = (await searchParams) ?? {};
-  const next = typeof sp.next === "string" ? sp.next : "/new";
-  return <LoginForm next={next} />;
 }
