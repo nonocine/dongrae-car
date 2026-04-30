@@ -130,7 +130,7 @@ export async function getInitialDistance(): Promise<number> {
   const { data, error } = await supabase
     .from("settings")
     .select("value")
-    .eq("key", "initial_distance")
+    .eq("key", "initial_mileage")
     .maybeSingle();
   if (error) throw new Error(error.message);
   const v = data?.value;
@@ -149,7 +149,7 @@ export async function setInitialDistance(formData: FormData) {
 
   const { error } = await supabase
     .from("settings")
-    .upsert({ key: "initial_distance", value, updated_at: new Date().toISOString() }, {
+    .upsert({ key: "initial_mileage", value, updated_at: new Date().toISOString() }, {
       onConflict: "key",
     });
   if (error) throw new Error(error.message);
@@ -160,7 +160,7 @@ export async function setInitialDistance(formData: FormData) {
 
 // =====================================================================
 // Cumulative distance helpers
-//   현재 누적거리 = settings.initial_distance + Σ driving_logs.distance
+//   현재 누적거리 = settings.initial_mileage + Σ driving_logs.distance
 // =====================================================================
 export async function getLatestCumulative(): Promise<number> {
   const [initial, { data, error }] = await Promise.all([

@@ -77,7 +77,8 @@ create policy "anon delete drivers"
 
 -- =========================================================
 -- 시스템 설정 테이블 (key/value)
---   - initial_distance: 차량 인수 시점의 누적거리 (기본 4341 km)
+--   - initial_mileage: 차량 인수 시점의 누적거리 (기본 4341 km)
+--     출장일지(dongrae-business-trip)와 공유되는 키.
 -- =========================================================
 create table if not exists settings (
   id uuid primary key default gen_random_uuid(),
@@ -105,5 +106,5 @@ create policy "anon update settings"
   with check (true);
 
 insert into settings (key, value)
-values ('initial_distance', '4341')
+values ('initial_mileage', '4341')
 on conflict (key) do nothing;
