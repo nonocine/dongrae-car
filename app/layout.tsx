@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import Splash from "@/app/components/Splash";
 
 export const metadata: Metadata = {
   title: "동래구청소년센터 차량 운행일지",
@@ -24,7 +25,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className="h-full antialiased">
-      <body className="min-h-full flex flex-col bg-white text-slate-900">
+      <body
+        className="min-h-full flex flex-col bg-white text-slate-900"
+        style={{ visibility: "hidden" }}
+      >
+        <Splash />
         {children}
       </body>
     </html>

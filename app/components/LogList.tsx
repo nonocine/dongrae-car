@@ -10,6 +10,25 @@ function formatNumber(n: number) {
   return new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(n);
 }
 
+function formatPeriod(log: {
+  driven_at: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  is_multi_day?: boolean;
+}): string {
+  const start = log.start_date || log.driven_at;
+  const end = log.end_date || log.driven_at;
+  if (!log.is_multi_day || end === start) {
+    return formatDate(start);
+  }
+  const s = new Date(start);
+  const e = new Date(end);
+  const days =
+    Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const nights = Math.max(0, days - 1);
+  return `${formatDate(start)} ~ ${formatDate(end)} (${nights}박 ${days}일)`;
+}
+
 export default function LogList({
   logs,
   isAdmin,
@@ -35,7 +54,7 @@ export default function LogList({
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold text-[color:var(--brand)]">
-                {formatDate(log.driven_at)}
+                {formatPeriod(log)}
               </p>
               <p className="mt-0.5 text-base font-semibold text-slate-900">
                 {log.purpose}
@@ -57,6 +76,14 @@ export default function LogList({
             <div className="flex gap-2">
               <span className="w-14 shrink-0 text-slate-500">확인</span>
               <span className="font-medium text-slate-800">{log.confirmed_by}</span>
+            </div>
+            <div className="flex gap-2 sm:col-span-2">
+              <span className="w-14 shrink-0 text-slate-500">동승자</span>
+              <span className="text-slate-800">
+                {log.passenger_names && log.passenger_names.length > 0
+                  ? log.passenger_names.join(", ")
+                  : "단독 운행"}
+              </span>
             </div>
             <div className="flex gap-2 sm:col-span-2">
               <span className="w-14 shrink-0 text-slate-500">출발</span>

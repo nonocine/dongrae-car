@@ -8,6 +8,7 @@ import {
   type Driver,
   type DrivingLog,
 } from "@/lib/supabase";
+import { VEHICLE } from "@/lib/vehicle";
 
 const ADMIN_COOKIE = "dongrae_admin";
 const DRIVER_COOKIE = "dongrae_driver";
@@ -181,7 +182,11 @@ export async function getLatestCumulative(): Promise<number> {
 export async function createDrivingLog(formData: FormData) {
   const driver = await requireDriver();
 
-  const driven_at = String(formData.get("driven_at") ?? "");
+  const isMultiDay = String(formData.get("is_multi_day") ?? "") === "true";
+  const startDate = String(formData.get("start_date") ?? "");
+  const endDateRaw = String(formData.get("end_date") ?? "");
+  const endDate = isMultiDay ? endDateRaw : startDate;
+
   const purpose = String(formData.get("purpose") ?? "").trim();
   const departure = String(formData.get("departure") ?? "").trim();
   const waypointRaw = String(formData.get("waypoint") ?? "").trim();
@@ -189,8 +194,18 @@ export async function createDrivingLog(formData: FormData) {
   const odometer = Number(formData.get("odometer") ?? NaN);
   const confirmed_by = String(formData.get("confirmed_by") ?? "").trim();
 
+  const passengersRaw = formData.getAll("passengers");
+  const passenger_names = Array.from(
+    new Set(
+      passengersRaw
+        .map((v) => String(v).trim())
+        .filter((s) => s.length > 0 && s !== driver.name)
+    )
+  );
+
   if (
-    !driven_at ||
+    !startDate ||
+    !endDate ||
     !purpose ||
     !departure ||
     !destination ||
@@ -199,6 +214,10 @@ export async function createDrivingLog(formData: FormData) {
     odometer < 0
   ) {
     throw new Error("필수 항목을 모두 올바르게 입력해주세요.");
+  }
+
+  if (isMultiDay && endDate < startDate) {
+    throw new Error("종료일은 시작일 이후여야 합니다.");
   }
 
   const previous = await getLatestCumulative();
@@ -212,12 +231,16 @@ export async function createDrivingLog(formData: FormData) {
   }
 
   const { error } = await supabase.from("driving_logs").insert({
-    driven_at,
+    driven_at: startDate,
+    start_date: startDate,
+    end_date: endDate,
+    is_multi_day: isMultiDay && endDate > startDate,
     driver: driver.name,
     purpose,
     departure,
     waypoint: waypointRaw || null,
     destination,
+    passenger_names,
     distance,
     total_distance,
     confirmed_by,
@@ -226,6 +249,19 @@ export async function createDrivingLog(formData: FormData) {
 
   revalidatePath("/");
   redirect("/");
+}
+
+export async function listOtherDriverNames(
+  excludeName: string
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("drivers")
+    .select("name")
+    .order("name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? [])
+    .map((d) => d.name as string)
+    .filter((n) => n !== excludeName);
 }
 
 export async function deleteDrivingLog(formData: FormData) {
@@ -271,12 +307,27 @@ export async function listDrivingLogs(month?: string): Promise<DrivingLog[]> {
 // Admin stats
 // =====================================================================
 export type AdminStats = {
-  recentDestinations: { destination: string; driven_at: string }[];
+  recentDestinations: { destinations: string[]; driven_at: string }[];
   topDestinations: { destination: string; count: number }[];
   topDrivers: { driver: string; count: number }[];
   thisMonthDistance: number;
   totalDistance: number;
 };
+
+function extractDestinations(row: {
+  waypoint?: string | null;
+  destination?: string | null;
+}): string[] {
+  const raw = (row.waypoint ?? "").trim();
+  if (raw) {
+    return raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }
+  const dest = (row.destination ?? "").trim();
+  return dest ? [dest] : [];
+}
 
 function todayMonthStartKR(): string {
   const now = new Date();
@@ -293,7 +344,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     getInitialDistance(),
     supabase
       .from("driving_logs")
-      .select("destination, driver, distance, driven_at, created_at")
+      .select("destination, waypoint, driver, distance, driven_at, created_at")
       .order("driven_at", { ascending: false })
       .order("created_at", { ascending: false }),
   ]);
@@ -301,14 +352,23 @@ export async function getAdminStats(): Promise<AdminStats> {
   const rows = logsRes.data ?? [];
 
   const recentDestinations = rows.slice(0, 5).map((r) => ({
-    destination: r.destination as string,
+    destinations: extractDestinations({
+      waypoint: r.waypoint as string | null,
+      destination: r.destination as string,
+    }),
     driven_at: r.driven_at as string,
   }));
 
   const destCount = new Map<string, number>();
   for (const r of rows) {
-    const d = r.destination as string;
-    destCount.set(d, (destCount.get(d) ?? 0) + 1);
+    const stops = extractDestinations({
+      waypoint: r.waypoint as string | null,
+      destination: r.destination as string,
+    });
+    for (const s of stops) {
+      if (s === VEHICLE.centerName) continue;
+      destCount.set(s, (destCount.get(s) ?? 0) + 1);
+    }
   }
   const topDestinations = [...destCount.entries()]
     .sort((a, b) => b[1] - a[1])

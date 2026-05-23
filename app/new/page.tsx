@@ -2,7 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import Header from "@/app/components/Header";
 import NewLogForm from "@/app/new/NewLogForm";
-import { getDriverSession, getLatestCumulative } from "@/app/actions";
+import {
+  getDriverSession,
+  getLatestCumulative,
+  listOtherDriverNames,
+} from "@/app/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +20,10 @@ export default async function NewLogPage() {
   const driver = await getDriverSession();
   if (!driver) redirect("/");
 
-  const previous = await getLatestCumulative();
+  const [previous, passengerCandidates] = await Promise.all([
+    getLatestCumulative(),
+    listOtherDriverNames(driver.name),
+  ]);
   return (
     <>
       <Header />
@@ -31,6 +38,7 @@ export default async function NewLogPage() {
           defaultDate={todayKR()}
           previousCumulative={previous}
           driverName={driver.name}
+          passengerCandidates={passengerCandidates}
         />
       </main>
     </>

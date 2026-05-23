@@ -99,7 +99,9 @@ function RecentDestinationsBox({
                   {i + 1}
                 </span>
                 <span className="truncate font-medium text-slate-800">
-                  {it.destination}
+                  {it.destinations.length > 0
+                    ? it.destinations.join(" → ")
+                    : "—"}
                 </span>
               </span>
               <span className="shrink-0 text-xs text-emerald-700">

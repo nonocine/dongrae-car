@@ -28,11 +28,15 @@ export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
 export type DrivingLog = {
   id: string;
   driven_at: string;
+  start_date: string;
+  end_date: string;
+  is_multi_day: boolean;
   driver: string;
   purpose: string;
   departure: string;
   waypoint: string | null;
   destination: string;
+  passenger_names: string[];
   distance: number;
   total_distance: number;
   confirmed_by: string;

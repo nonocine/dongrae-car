@@ -9,6 +9,7 @@ type Props = {
   defaultDate: string;
   previousCumulative: number;
   driverName: string;
+  passengerCandidates: string[];
 };
 
 const FREQUENT_PLACES = [
@@ -43,11 +44,35 @@ export default function NewLogForm({
   defaultDate,
   previousCumulative,
   driverName,
+  passengerCandidates,
 }: Props) {
   const [odometer, setOdometer] = useState<string>("");
   const [stops, setStops] = useState<Place[]>([{ selected: "", custom: "" }]);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const [isMultiDay, setIsMultiDay] = useState<boolean>(false);
+  const [startDate, setStartDate] = useState<string>(defaultDate);
+  const [endDate, setEndDate] = useState<string>(defaultDate);
+
+  const [passengers, setPassengers] = useState<string[]>([]);
+
+  function togglePassenger(name: string) {
+    setPassengers((prev) =>
+      prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name]
+    );
+  }
+
+  const periodInfo = (() => {
+    if (!isMultiDay || !startDate || !endDate) return null;
+    const s = new Date(startDate);
+    const e = new Date(endDate);
+    const diffMs = e.getTime() - s.getTime();
+    if (!Number.isFinite(diffMs) || diffMs < 0) return null;
+    const days = Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1;
+    const nights = days - 1;
+    return { days, nights };
+  })();
 
   const resolvedStops = stops.map(resolvePlace).filter((s) => s.length > 0);
 
@@ -79,6 +104,10 @@ export default function NewLogForm({
           setError("최소 1개의 목적지를 입력해주세요.");
           return;
         }
+        if (isMultiDay && endDate && startDate && endDate < startDate) {
+          setError("종료일은 시작일 이후여야 합니다.");
+          return;
+        }
         if (distanceInvalid) {
           setError(
             `입력한 누적거리(${formatNumber(rounded ?? 0)} km)가 직전 누적(${formatNumber(
@@ -90,6 +119,13 @@ export default function NewLogForm({
         formData.set("departure", VEHICLE.centerName);
         formData.set("destination", VEHICLE.centerName);
         formData.set("waypoint", resolvedStops.join(", "));
+        formData.set("is_multi_day", isMultiDay ? "true" : "false");
+        formData.set("start_date", startDate);
+        formData.set("end_date", isMultiDay ? endDate : startDate);
+        formData.delete("passengers");
+        for (const p of passengers) {
+          formData.append("passengers", p);
+        }
         startTransition(async () => {
           try {
             await createDrivingLog(formData);
@@ -110,17 +146,122 @@ export default function NewLogForm({
       </div>
 
       <div>
-        <label htmlFor="driven_at" className={labelCls}>
+        <div className="flex items-center justify-between">
+          <label className={labelCls}>동승자</label>
+          <span className="text-xs font-medium text-slate-500">
+            {passengers.length > 0
+              ? `동승자 ${passengers.length}명`
+              : "단독 운행"}
+          </span>
+        </div>
+        {passengerCandidates.length === 0 ? (
+          <p className="mt-1 rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+            등록된 다른 직원이 없습니다.
+          </p>
+        ) : (
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {passengerCandidates.map((name) => {
+              const active = passengers.includes(name);
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => togglePassenger(name)}
+                  aria-pressed={active}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                    active
+                      ? "border-[color:var(--brand)] bg-[color:var(--brand)] text-white shadow-sm"
+                      : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {name}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label className={labelCls}>
           운행 일자 <span className="text-[color:var(--accent)]">*</span>
         </label>
-        <input
-          id="driven_at"
-          name="driven_at"
-          type="date"
-          required
-          defaultValue={defaultDate}
-          className={inputCls}
-        />
+        <div className="mt-1 inline-flex rounded-md border border-slate-300 bg-slate-50 p-0.5 text-xs font-medium">
+          <button
+            type="button"
+            onClick={() => {
+              setIsMultiDay(false);
+              setEndDate(startDate);
+            }}
+            className={`rounded px-3 py-1.5 transition ${
+              !isMultiDay
+                ? "bg-white text-[color:var(--brand-strong)] shadow-sm"
+                : "text-slate-500"
+            }`}
+          >
+            당일
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsMultiDay(true)}
+            className={`rounded px-3 py-1.5 transition ${
+              isMultiDay
+                ? "bg-white text-[color:var(--brand-strong)] shadow-sm"
+                : "text-slate-500"
+            }`}
+          >
+            기간 (1박 이상)
+          </button>
+        </div>
+
+        {!isMultiDay ? (
+          <input
+            type="date"
+            required
+            value={startDate}
+            onChange={(e) => {
+              setStartDate(e.target.value);
+              setEndDate(e.target.value);
+            }}
+            className={inputCls}
+          />
+        ) : (
+          <div className="mt-1 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs text-slate-500">시작일</label>
+                <input
+                  type="date"
+                  required
+                  value={startDate}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setStartDate(v);
+                    if (endDate && endDate < v) setEndDate(v);
+                  }}
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500">종료일</label>
+                <input
+                  type="date"
+                  required
+                  value={endDate}
+                  min={startDate || undefined}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className={inputCls}
+                />
+              </div>
+            </div>
+            {periodInfo && (
+              <p className="text-xs text-[color:var(--brand-strong)]">
+                총 {periodInfo.days}일
+                {periodInfo.nights > 0 ? ` (${periodInfo.nights}박)` : ""}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div>
