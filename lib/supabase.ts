@@ -37,6 +37,7 @@ export type DrivingLog = {
   waypoint: string | null;
   destination: string;
   passenger_names: string[];
+  passenger_others: string[];
   distance: number;
   total_distance: number;
   confirmed_by: string;

@@ -1,15 +1,36 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #fafaf5;
   --foreground: #0f172a;
   --surface: #f5f6f8;
   --surface-border: #e5e7eb;
-  --brand: #1a5fb4;
-  --brand-strong: #15498d;
-  --brand-soft: #e8f0fb;
-  --accent: #c01c28;
-  --accent-soft: #fdecee;
+  --brand: #4269a1;
+  --brand-strong: #2c4774;
+  --brand-soft: #eef2f8;
+  --accent: #df483f;
+  --accent-soft: #fdecea;
+
+  /* Logo-derived palette (sampled from /images/dongrae-logo.png) */
+  --dongrae-blue: #4269a1;
+  --dongrae-blue-strong: #2c4774;
+  --dongrae-blue-soft: #eef2f8;
+
+  --dongrae-red: #df483f;
+  --dongrae-red-strong: #a8362e;
+  --dongrae-red-soft: #fdecea;
+
+  --dongrae-yellow: #fcd75c;
+  --dongrae-yellow-strong: #c79126;
+  --dongrae-yellow-soft: #fef8e1;
+
+  --dongrae-green: #4dbb79;
+  --dongrae-green-strong: #2f7a4d;
+  --dongrae-green-soft: #ecf8f0;
+
+  --dongrae-teal: #0891b2;
+  --dongrae-teal-strong: #0a6378;
+  --dongrae-teal-soft: #e6f4f8;
 }
 
 @theme inline {

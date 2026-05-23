@@ -203,6 +203,15 @@ export async function createDrivingLog(formData: FormData) {
     )
   );
 
+  const othersRaw = formData.getAll("passenger_others");
+  const passenger_others = Array.from(
+    new Set(
+      othersRaw
+        .map((v) => String(v).trim())
+        .filter((s) => s.length > 0)
+    )
+  );
+
   if (
     !startDate ||
     !endDate ||
@@ -241,6 +250,7 @@ export async function createDrivingLog(formData: FormData) {
     waypoint: waypointRaw || null,
     destination,
     passenger_names,
+    passenger_others,
     distance,
     total_distance,
     confirmed_by,

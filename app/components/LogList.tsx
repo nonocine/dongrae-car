@@ -80,9 +80,18 @@ export default function LogList({
             <div className="flex gap-2 sm:col-span-2">
               <span className="w-14 shrink-0 text-slate-500">동승자</span>
               <span className="text-slate-800">
-                {log.passenger_names && log.passenger_names.length > 0
-                  ? log.passenger_names.join(", ")
-                  : "단독 운행"}
+                {(() => {
+                  const staff = log.passenger_names ?? [];
+                  const others = log.passenger_others ?? [];
+                  if (staff.length === 0 && others.length === 0) {
+                    return "단독 운행";
+                  }
+                  const parts: string[] = [
+                    ...staff,
+                    ...others.map((n) => `${n}(외부)`),
+                  ];
+                  return parts.join(", ");
+                })()}
               </span>
             </div>
             <div className="flex gap-2 sm:col-span-2">
