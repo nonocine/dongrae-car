@@ -8,6 +8,12 @@ import {
   type Driver,
   type DrivingLog,
 } from "@/lib/supabase";
+import {
+  hashPassword,
+  sessionVerifier,
+  verifierMatches,
+  verifyPassword,
+} from "@/lib/password";
 import { VEHICLE } from "@/lib/vehicle";
 
 const ADMIN_COOKIE = "dongrae_admin";
@@ -65,20 +71,22 @@ export async function getDriverSession(): Promise<DriverSessionInfo | null> {
   const store = await cookies();
   const raw = store.get(DRIVER_COOKIE)?.value;
   if (!raw) return null;
-  let parsed: { name?: string; password?: string };
+  // v = 저장된 비밀번호에서 파생한 검증자. 비밀번호 자체는 쿠키에 넣지 않는다.
+  // password 필드를 담고 있던 구버전 쿠키는 무효로 처리되어 재로그인이 필요하다.
+  let parsed: { name?: string; v?: string };
   try {
     parsed = JSON.parse(raw);
   } catch {
     return null;
   }
-  if (!parsed.name || !parsed.password) return null;
+  if (!parsed.name || !parsed.v) return null;
   const { data, error } = await supabase
     .from("drivers")
     .select("id,name,password")
     .eq("name", parsed.name)
     .maybeSingle();
   if (error || !data) return null;
-  if (data.password !== parsed.password) return null;
+  if (!verifierMatches(String(data.password), parsed.v)) return null;
   return { id: data.id, name: data.name };
 }
 
@@ -104,11 +112,12 @@ export async function loginDriver(
     .eq("name", name)
     .maybeSingle();
   if (error) return { ok: false, message: error.message };
-  if (!data || data.password !== password) {
+  if (!data || !(await verifyPassword(password, String(data.password)))) {
     return { ok: false, message: "이름 또는 비밀번호가 올바르지 않습니다." };
   }
   const store = await cookies();
-  store.set(DRIVER_COOKIE, JSON.stringify({ name, password }), {
+  const payload = { name: data.name as string, v: sessionVerifier(String(data.password)) };
+  store.set(DRIVER_COOKIE, JSON.stringify(payload), {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
@@ -442,7 +451,9 @@ export async function addDriver(formData: FormData) {
   if (!name || !password) {
     throw new Error("이름과 비밀번호를 모두 입력해주세요.");
   }
-  const { error } = await supabase.from("drivers").insert({ name, password });
+  const { error } = await supabase
+    .from("drivers")
+    .insert({ name, password: await hashPassword(password) });
   if (error) {
     if (error.code === "23505") {
       throw new Error("이미 같은 이름의 운전자가 있습니다.");
@@ -470,7 +481,7 @@ export async function updateDriverPassword(formData: FormData) {
   }
   const { error } = await supabase
     .from("drivers")
-    .update({ password })
+    .update({ password: await hashPassword(password) })
     .eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin");

@@ -42,6 +42,10 @@ create policy "anon delete driving_logs"
 
 -- =========================================================
 -- 운전자 계정 테이블 (이름 + 비밀번호)
+--   password: bcrypt 해시로 저장한다($2로 시작). 출장일지
+--   (dongrae-business-trip) 앱과 공유되는 컬럼이며, 두 앱 모두 쓰기 시
+--   해시로 저장한다. 아직 전환되지 않은 평문 값은 로그인 시에만
+--   한시적으로 허용된다(일괄 전환 후 폴백 제거 예정).
 -- =========================================================
 create table if not exists drivers (
   id uuid primary key default gen_random_uuid(),

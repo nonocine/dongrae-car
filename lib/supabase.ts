@@ -44,10 +44,10 @@ export type DrivingLog = {
   created_at: string;
 };
 
+// password 는 서버 검증 경로(lib/password.ts)에서만 다루며 클라이언트로 나가는
+// 타입에는 포함하지 않는다.
 export type Driver = {
   id: string;
   name: string;
   created_at: string;
 };
-
-export type DriverWithPassword = Driver & { password: string };
