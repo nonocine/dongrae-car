@@ -31,12 +31,26 @@ cp .env.local.example .env.local
 ```
 
 ```dotenv
-NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_ANON_KEY
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
 ADMIN_PASSWORD=원하는_관리자_비밀번호
 ```
 
-> `ADMIN_PASSWORD`는 서버에서만 사용되며 클라이언트로 노출되지 않습니다.
+`SUPABASE_SERVICE_ROLE_KEY`는 Supabase 대시보드 > Project Settings > API >
+`service_role` 에서 확인합니다.
+
+> **세 값 모두 서버에서만 사용되며 클라이언트로 노출되지 않습니다.**
+> `SUPABASE_SERVICE_ROLE_KEY`에는 절대 `NEXT_PUBLIC_` 접두사를 붙이지 마세요.
+> 붙이는 순간 브라우저 번들에 키가 박히고, 이 키는 RLS를 우회하므로
+> DB 전체에 대한 무제한 권한이 유출됩니다.
+>
+> DB 접근은 전부 서버(Server Actions / Server Components)를 경유합니다.
+> `lib/supabase.ts`는 `server-only`로 보호되어 있어, 클라이언트 컴포넌트에서
+> 값으로 import 하면 빌드가 실패합니다. 타입만 필요한 경우 반드시
+> `import type { ... } from "@/lib/supabase"` 형태로 가져오세요.
+
+기존 `NEXT_PUBLIC_SUPABASE_URL`도 URL 값으로는 계속 인식되지만(비밀값이 아님),
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`는 더 이상 사용하지 않습니다.
 
 ## 실행
 
@@ -79,7 +93,8 @@ npm run dev
 ## 배포 (Vercel 권장)
 
 1. GitHub 저장소에 푸시 후 Vercel에서 import.
-2. Environment Variables 에 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ADMIN_PASSWORD` 세 개를 등록.
+2. Environment Variables 에 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_PASSWORD` 세 개를 등록.
+   (`SUPABASE_SERVICE_ROLE_KEY`는 Sensitive 로 표시하고, `NEXT_PUBLIC_` 접두사를 붙이지 말 것.)
 3. Build 명령어와 Output 디렉터리는 기본값 그대로 사용.
 
 ## 폴더 구조
