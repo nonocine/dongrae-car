@@ -21,6 +21,29 @@ const DRIVER_COOKIE = "dongrae_driver";
 const DEFAULT_INITIAL_DISTANCE = 4341;
 
 // =====================================================================
+// 재직 여부 (drivers.is_active)
+// =====================================================================
+// drivers 는 인사관리(동업자씨) 앱과 공유하는 테이블이고, 그쪽에서 퇴사를
+// is_active = false 로 표시한다. 컬럼은 nullable(default true)이라
+// "false 인 사람만 퇴사"로 판정한다. null 을 퇴사로 보면 컬럼이 생기기 전에
+// 만들어진 기존 계정이 전부 잠긴다.
+function isRetired(isActive: unknown): boolean {
+  return isActive === false;
+}
+
+/**
+ * 퇴사자(is_active = false)만 제외하는 쿼리 필터.
+ * `.eq("is_active", true)` 는 쓰면 안 된다 — null 인 재직자가 함께 빠진다.
+ * PostgREST 로는 `is_active=not.is.false` 로 나가고, SQL 의
+ * `NOT (is_active IS FALSE)` 이므로 null 과 true 가 모두 남는다.
+ */
+function excludeRetired<T extends { not(c: string, o: string, v: unknown): T }>(
+  query: T
+): T {
+  return query.not("is_active", "is", false);
+}
+
+// =====================================================================
 // Admin session
 // =====================================================================
 export async function isAdmin(): Promise<boolean> {
@@ -82,11 +105,14 @@ export async function getDriverSession(): Promise<DriverSessionInfo | null> {
   if (!parsed.name || !parsed.v) return null;
   const { data, error } = await supabase
     .from("drivers")
-    .select("id,name,password")
+    .select("id,name,password,is_active")
     .eq("name", parsed.name)
     .maybeSingle();
   if (error || !data) return null;
   if (!verifierMatches(String(data.password), parsed.v)) return null;
+  // 퇴사자는 쿠키가 아직 살아 있어도 이 시점에서 미인증으로 떨어진다.
+  // 로그인 입구만 막으면 이미 발급된 30일짜리 쿠키가 그대로 통과한다.
+  if (isRetired(data.is_active)) return null;
   return { id: data.id, name: data.name };
 }
 
@@ -108,12 +134,17 @@ export async function loginDriver(
   }
   const { data, error } = await supabase
     .from("drivers")
-    .select("id,name,password")
+    .select("id,name,password,is_active")
     .eq("name", name)
     .maybeSingle();
   if (error) return { ok: false, message: error.message };
   if (!data || !(await verifyPassword(password, String(data.password)))) {
     return { ok: false, message: "이름 또는 비밀번호가 올바르지 않습니다." };
+  }
+  // 자격 증명이 맞은 뒤에만 재직 여부를 본다. 순서를 뒤집으면 비밀번호를
+  // 모르는 사람도 "퇴사 처리된 계정" 응답으로 계정 존재를 확인할 수 있다.
+  if (isRetired(data.is_active)) {
+    return { ok: false, message: "퇴사 처리된 계정입니다. 관리자에게 문의하세요." };
   }
   const store = await cookies();
   const payload = { name: data.name as string, v: sessionVerifier(String(data.password)) };
@@ -273,10 +304,9 @@ export async function createDrivingLog(formData: FormData) {
 export async function listOtherDriverNames(
   excludeName: string
 ): Promise<string[]> {
-  const { data, error } = await supabase
-    .from("drivers")
-    .select("name")
-    .order("name", { ascending: true });
+  const { data, error } = await excludeRetired(
+    supabase.from("drivers").select("name")
+  ).order("name", { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? [])
     .map((d) => d.name as string)
@@ -427,19 +457,19 @@ export async function getAdminStats(): Promise<AdminStats> {
 // =====================================================================
 export async function listDrivers(): Promise<Driver[]> {
   await requireAdmin();
-  const { data, error } = await supabase
-    .from("drivers")
-    .select("id,name,created_at")
-    .order("created_at", { ascending: true });
+  // 삭제가 소프트 삭제로 바뀌었으므로 여기서도 퇴사자를 제외한다. 그러지 않으면
+  // 관리자가 삭제한 운전자가 목록에 그대로 남아 삭제가 안 된 것처럼 보인다.
+  const { data, error } = await excludeRetired(
+    supabase.from("drivers").select("id,name,created_at")
+  ).order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []) as Driver[];
 }
 
 export async function listDriverNames(): Promise<string[]> {
-  const { data, error } = await supabase
-    .from("drivers")
-    .select("name")
-    .order("name", { ascending: true });
+  const { data, error } = await excludeRetired(
+    supabase.from("drivers").select("name")
+  ).order("name", { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []).map((d) => d.name as string);
 }
@@ -463,11 +493,22 @@ export async function addDriver(formData: FormData) {
   revalidatePath("/admin");
 }
 
+/**
+ * 운전자 비활성화(소프트 삭제).
+ *
+ * drivers 는 인사관리(동업자씨) 앱과 공유하는 테이블이므로 물리삭제 금지.
+ * 행을 지우면 그쪽 인사기록이 FK 로 함께 날아가거나 고아가 된다.
+ * 퇴사 처리는 양쪽 모두 is_active = false 로 통일한다.
+ * (복구는 인사관리 앱에서 is_active 를 되돌린다 — 이 앱에는 복구 경로가 없다.)
+ */
 export async function deleteDriver(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("운전자 ID가 없습니다.");
-  const { error } = await supabase.from("drivers").delete().eq("id", id);
+  const { error } = await supabase
+    .from("drivers")
+    .update({ is_active: false })
+    .eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin");
 }
